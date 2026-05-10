@@ -1,4 +1,4 @@
-// Player page - login with access code, view stats
+// Player page - Player of the Day shown first; access code unlocks personal stats
 const PLAYER_KEY = 'hoopstats_player_code';
 const root = document.getElementById('player-app');
 
@@ -7,15 +7,71 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
-function renderLogin(errorMsg) {
-  root.innerHTML = `
-    <div class="section max-w-md mx-auto">
-      <h2 class="text-xl font-bold mb-3"><i class="fas fa-key mr-2"></i>Enter Your Access Code</h2>
-      <p class="text-sm text-gray-600 mb-3">Your coach or admin should have given you an access code (e.g. <code>HAWK-MJ23</code>).</p>
-      ${errorMsg ? `<div class="alert alert-error">${escapeHtml(errorMsg)}</div>` : ''}
-      <input id="code" class="input mb-3" placeholder="ACCESS CODE" autofocus />
-      <button id="login-btn" class="btn btn-primary w-full"><i class="fas fa-sign-in-alt"></i>View My Stats</button>
+function potdSection(potd) {
+  if (!potd) {
+    return `
+      <div class="section" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #fbbf24">
+        <div class="flex items-center gap-3">
+          <i class="fas fa-star text-4xl text-yellow-500"></i>
+          <div>
+            <h2 class="text-xl font-bold text-yellow-800">Player of the Day</h2>
+            <p class="text-yellow-700">No stats uploaded yet — check back once games are played!</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="section" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #fbbf24">
+      <div class="flex items-start justify-between flex-wrap gap-3 mb-3">
+        <div class="flex items-center gap-3">
+          <i class="fas fa-star text-4xl text-yellow-500"></i>
+          <div>
+            <div class="text-sm font-semibold text-yellow-800 uppercase tracking-wide">Player of the Day</div>
+            <h2 class="text-3xl font-bold text-yellow-900">${escapeHtml(potd.player_name)} ${potd.jersey_number ? `<span class="opacity-75">#${potd.jersey_number}</span>` : ''}</h2>
+            <div class="text-sm text-yellow-800">${escapeHtml(potd.team_name)}${potd.position ? ' · ' + escapeHtml(potd.position) : ''}</div>
+          </div>
+        </div>
+        <div class="text-right text-sm text-yellow-800">
+          ${potd.game_date ? `<div><i class="fas fa-calendar mr-1"></i>${escapeHtml(potd.game_date)}</div>` : ''}
+          <div>${escapeHtml(potd.home_team_name)} ${potd.home_score}–${potd.away_score} ${escapeHtml(potd.away_team_name)}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.points}</div><div class="text-xs text-gray-500 uppercase">PTS</div></div>
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.rebounds}</div><div class="text-xs text-gray-500 uppercase">REB</div></div>
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.assists}</div><div class="text-xs text-gray-500 uppercase">AST</div></div>
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.steals}</div><div class="text-xs text-gray-500 uppercase">STL</div></div>
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.blocks}</div><div class="text-xs text-gray-500 uppercase">BLK</div></div>
+        <div class="bg-white rounded-lg p-2 text-center"><div class="text-2xl font-bold text-orange-600">${potd.fg_made}/${potd.fg_attempted}</div><div class="text-xs text-gray-500 uppercase">FG</div></div>
+      </div>
     </div>
+  `;
+}
+
+function loginCardHtml(errorMsg) {
+  return `
+    <div class="section max-w-md mx-auto">
+      <h2 class="text-xl font-bold mb-3"><i class="fas fa-id-card mr-2"></i>View Your Personal Stats</h2>
+      <p class="text-sm text-gray-600 mb-3">Enter your player access code to see your own dashboard.</p>
+      ${errorMsg ? `<div class="alert alert-error">${escapeHtml(errorMsg)}</div>` : ''}
+      <input id="code" class="input mb-3" placeholder="e.g. HAWK-MJ23" />
+      <button id="login-btn" class="btn btn-primary w-full"><i class="fas fa-chart-line"></i>View My Stats</button>
+    </div>
+  `;
+}
+
+async function loadLanding(errorMsg) {
+  root.innerHTML = '<div class="text-gray-500">Loading...</div>';
+  let potd = null;
+  try {
+    const { data } = await axios.get('/api/player-of-the-day');
+    potd = data.player_of_the_day;
+  } catch (e) {}
+  root.innerHTML = `
+    <h1 class="text-3xl font-bold mb-4"><i class="fas fa-user-circle text-blue-500 mr-2"></i>Player Area</h1>
+    ${potdSection(potd)}
+    ${loginCardHtml(errorMsg)}
   `;
   document.getElementById('code').addEventListener('keypress', e => { if (e.key === 'Enter') tryLogin(); });
   document.getElementById('login-btn').addEventListener('click', tryLogin);
@@ -29,7 +85,7 @@ async function tryLogin() {
     sessionStorage.setItem(PLAYER_KEY, code);
     showPlayer(data.player);
   } catch (e) {
-    renderLogin(e.response?.data?.error || 'Invalid access code');
+    loadLanding(e.response?.data?.error || 'Invalid access code');
   }
 }
 
@@ -45,7 +101,6 @@ async function showPlayer(player) {
 
 function renderPlayerDashboard(data) {
   const { player, games, totals, averages } = data;
-
   const avg = averages || { points:0, rebounds:0, assists:0, steals:0, blocks:0, fg_pct:0, three_pct:0, ft_pct:0, minutes:0, turnovers:0 };
 
   root.innerHTML = `
@@ -59,7 +114,7 @@ function renderPlayerDashboard(data) {
             ${player.height ? ' · ' + escapeHtml(player.height) : ''}
           </div>
         </div>
-        <button id="logout-btn" class="btn btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i>Switch Player</button>
+        <button id="logout-btn" class="btn btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i>Back</button>
       </div>
     </div>
 
@@ -115,12 +170,12 @@ function renderPlayerDashboard(data) {
 
     <div class="section">
       <h3 class="text-lg font-bold mb-3"><i class="fas fa-images mr-1"></i>Tournament Photos</h3>
-      <a href="/gallery/${player.tournament_id}" class="btn btn-primary"><i class="fas fa-camera-retro"></i>View & Upload Game Photos</a>
+      <a href="/gallery/${player.tournament_id}" class="btn btn-primary"><i class="fas fa-camera-retro"></i>View Game Photos</a>
     </div>
   `;
 
   document.getElementById('logout-btn').addEventListener('click', () => {
-    sessionStorage.removeItem(PLAYER_KEY); renderLogin();
+    sessionStorage.removeItem(PLAYER_KEY); loadLanding();
   });
 }
 
@@ -133,5 +188,5 @@ function renderPlayerDashboard(data) {
       return;
     } catch (e) { sessionStorage.removeItem(PLAYER_KEY); }
   }
-  renderLogin();
+  loadLanding();
 })();
