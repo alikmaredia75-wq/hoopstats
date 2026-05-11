@@ -33,7 +33,6 @@ function render(data, teamsWithPlayers) {
           ${t.start_date ? `<p class="text-gray-600"><i class="fas fa-calendar mr-1"></i>${escapeHtml(t.start_date)}${t.end_date ? ' - ' + escapeHtml(t.end_date) : ''}</p>` : ''}
           ${t.description ? `<p class="text-gray-700 mt-2">${escapeHtml(t.description)}</p>` : ''}
         </div>
-        <a href="/gallery/${t.id}" class="btn btn-primary"><i class="fas fa-images"></i>Photo Gallery</a>
       </div>
     </div>
 
@@ -113,22 +112,16 @@ function renderGameDetail(el, data) {
   el.innerHTML = `
     <div class="overflow-x-auto"><table class="stats-table">
       <thead>
-        <tr><th>#</th><th>Player</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG</th><th>3P</th><th>FT</th></tr>
+        <tr><th>#</th><th>Player</th><th>PTS</th><th>REB</th><th>AST</th></tr>
       </thead>
       <tbody>
         ${stats.map(s => `
           <tr>
             <td>${s.jersey_number ?? ''}</td>
             <td class="text-left font-semibold">${escapeHtml(s.player_name)}</td>
-            <td>${s.minutes}</td>
             <td><strong>${s.points}</strong></td>
             <td>${s.rebounds}</td>
             <td>${s.assists}</td>
-            <td>${s.steals}</td>
-            <td>${s.blocks}</td>
-            <td>${s.fg_made}/${s.fg_attempted}</td>
-            <td>${s.three_made}/${s.three_attempted}</td>
-            <td>${s.ft_made}/${s.ft_attempted}</td>
           </tr>
         `).join('')}
       </tbody>

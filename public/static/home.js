@@ -7,7 +7,6 @@ async function loadTournaments() {
       container.innerHTML = `
         <div class="col-span-full text-center py-8 text-gray-500">
           <i class="fas fa-info-circle mr-2"></i>No tournaments yet.
-          <a href="/admin" class="text-orange-500 underline ml-1">Create one</a>
         </div>`;
       return;
     }
@@ -19,7 +18,6 @@ async function loadTournaments() {
         ${t.description ? `<p class="text-sm text-gray-700 mb-3">${escapeHtml(t.description)}</p>` : ''}
         <div class="flex gap-2 flex-wrap">
           <a href="/tournament/${t.id}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i>View</a>
-          <a href="/gallery/${t.id}" class="btn btn-secondary btn-sm"><i class="fas fa-images"></i>Photos</a>
         </div>
       </div>
     `).join('');

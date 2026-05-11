@@ -1,127 +1,84 @@
-# HoopStats — Basketball Tournament Stats App
+# HoopStats
 
 ## Project Overview
 - **Name**: HoopStats
-- **Goal**: Tournament organizers (admins) upload basketball stats and game photos. Players view their personal performance, whole teams view all-team stats, and fans browse photos.
+- **Goal**: A simple basketball tournament stats site. Pick a player or a team and see their points, rebounds, and assists. Browse the Player of the Day on the front of the player area. Admins enter all data through a hidden admin panel.
 - **Features**:
-  - Hidden admin panel with **changeable password** (no link from public pages)
-  - Player access codes → personal dashboard (PPG, RPG, FG%, etc., game-by-game)
-  - **Team access codes** → whole-team stat sheet with W/L record, PPG for/against, roster averages sorted by PPG
-  - **Player of the Day** featured prominently on the player landing page (no login required)
-  - Admin-only photo upload to Cloudflare R2 (anyone can view; only admins post or delete)
+  - Public Player of the Day (top PTS + REB + AST in the most recent game)
+  - Public player browsing: tournament → team → player dropdowns, then PTS / REB / AST totals, averages, and per-game log
+  - Public team browsing: tournament → team dropdowns, then W/L record + per-player PTS / REB / AST totals & averages
+  - Tournament detail page with team rosters, games, and per-game PTS / REB / AST box scores
+  - Hidden admin panel (admin password only) to manage tournaments, teams, players, games, and stats
+  - Admin can change the admin password from the Settings tab
 
-## Live URL (sandbox preview)
-- **App**: https://3000-ivfzar3w954mxllktu1pb-3844e1b6.sandbox.novita.ai
-- **Hidden admin panel**: https://3000-ivfzar3w954mxllktu1pb-3844e1b6.sandbox.novita.ai/secure-admin-panel-x7q
-
-## How to Use
-
-### As Admin (hidden URL)
-1. Open `/secure-admin-panel-x7q` directly — there is no link to it from any public page.
-2. Sign in. The default password is **`admin123`**.
-3. Use the **Settings** tab to change your password — you'll be logged out and asked to sign in again with the new one.
-4. Then use the other tabs:
-   - **Tournaments** — create / delete tournaments
-   - **Teams** — add teams; each team gets a unique **team code** (e.g. `HAWKS-2026`). Share it with the team so they can view whole-team stats. You can edit any team's code by clicking the pencil icon.
-   - **Players** — add players, each with an auto-generated **player access code**. Share with each player.
-   - **Games** — schedule matchups + final scores
-   - **Stats** — pick a game + player, fill in the box score; re-saving updates the existing line
-   - **Photos** — upload one or many game pictures (admin only); delete any photo
-
-### As a Player (`/player`)
-1. The first thing you see is the **Player of the Day** — the standout performance across all uploaded stats (no login needed).
-2. Below that, enter your player access code (e.g. `HAWK-MJ23`) to view your personal dashboard: averages, totals, and a game-by-game box score.
-
-### As a Team (`/team`)
-1. Enter your team code (e.g. `HAWKS-2026`).
-2. See your team's record (W-L), points for/against, point differential, and a roster table with each player's season averages sorted by PPG.
-3. See a per-game result list (W/L badges, scores, dates).
-
-### Game Photos (`/gallery/:tournament_id`)
-- **Anyone** can browse and click photos for a full-size lightbox view.
-- **Only admins** can upload or delete (a notice tells regular visitors that uploads are admin-only).
+## URLs
+- **Local dev**: http://localhost:3000
+- **Production**: not yet deployed
+- **Public pages**: `/`, `/player`, `/team`, `/tournament/:id`
+- **Hidden admin panel**: `/secure-admin-panel-x7q` (legacy `/admin` redirects to `/player`)
 
 ## Functional Entry URIs
-| Path | Method | Auth | Description |
-|---|---|---|---|
-| `/` | GET | — | Home + tournament list |
-| `/player` | GET | — | Player of the Day + personal-stats login |
-| `/team` | GET | — | Team-code login + whole-team stats |
-| `/tournament/:id` | GET | — | Public tournament page (teams, schedule, box scores) |
-| `/gallery/:id` | GET | — | Photo gallery (admin upload, public view) |
-| `/secure-admin-panel-x7q` | GET | — | Hidden admin panel |
-| `/admin` | GET | — | Redirects to `/player` (legacy) |
-| `/api/admin/check` | POST | Admin | Verify admin password (`X-Admin-Password` header) |
-| `/api/admin/change-password` | POST | Admin | `{new_password}` — updates stored password |
-| `/api/tournaments` | GET/POST | — / Admin | List / create tournaments |
-| `/api/tournaments/:id` | GET / DELETE | — / Admin | Read / delete tournament |
-| `/api/teams/:id` | GET | — | Public team + roster (no codes leaked) |
-| `/api/teams` | POST | Admin | `{tournament_id, name, coach?, access_code?}` |
-| `/api/teams/:id/access-code` | PUT | Admin | `{access_code}` |
-| `/api/teams/:id` | DELETE | Admin | Delete team |
-| `/api/team/login` | POST | — | `{access_code}` → team |
-| `/api/team/:id/stats` | GET | — | Whole-team stats + roster averages + W/L |
-| `/api/admin/teams?tournament_id=` | GET | Admin | Teams with codes |
-| `/api/players` | POST | Admin | `{team_id, name, jersey_number?, position?, height?, access_code?}` |
-| `/api/players/:id` | DELETE | Admin | Delete player |
-| `/api/admin/players?tournament_id=` | GET | Admin | Players with codes |
-| `/api/player/login` | POST | — | `{access_code}` → player |
-| `/api/player/:id/stats` | GET | — | Player totals + averages + per-game box scores |
-| `/api/player-of-the-day` | GET | — | Best single-game performance (optional `?tournament_id=`) |
-| `/api/games` | POST | Admin | Create game |
-| `/api/games/:id` | GET / DELETE | — / Admin | Game + box score / delete |
-| `/api/stats` | POST | Admin | Upsert per-player per-game stat line |
-| `/api/photos/upload` | POST | **Admin** | Multipart: `file, tournament_id, game_id?, caption?, uploaded_by?` |
-| `/api/photos?tournament_id=&game_id=` | GET | — | Public photo list |
-| `/api/photos/file/:id` | GET | — | Stream photo bytes from R2 |
-| `/api/photos/:id` | DELETE | Admin | Delete photo (R2 + D1) |
 
-All admin endpoints require header: `X-Admin-Password: <current password>`.
+### Public API
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/tournaments` | List tournaments |
+| GET | `/api/tournaments/:id` | One tournament with its teams & games |
+| GET | `/api/teams/:id` | One team with its players |
+| GET | `/api/team/:id/stats` | Team aggregated stats: record + per-player totals/averages (PTS/REB/AST) |
+| GET | `/api/players?tournament_id=&team_id=` | Players, filterable by tournament and/or team |
+| GET | `/api/player/:id` | Player profile (public, no code) |
+| GET | `/api/player/:id/stats` | Player game log + totals + averages (PTS/REB/AST) |
+| GET | `/api/player-of-the-day?tournament_id=` | Top performer by PTS+REB+AST |
+| GET | `/api/games/:id` | One game with its stats |
+
+### Admin API (require header `X-Admin-Password: <password>`)
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/admin/check` | Validate password |
+| POST | `/api/admin/change-password` | Set new admin password (min 4 chars) |
+| POST/DELETE | `/api/tournaments[/:id]` | Create / delete tournament |
+| POST/DELETE | `/api/teams[/:id]` | Create / delete team |
+| POST/DELETE | `/api/players[/:id]` | Create / delete player |
+| POST/DELETE | `/api/games[/:id]` | Create / delete game |
+| POST | `/api/stats` | Upsert per-game stats (PTS / REB / AST) |
 
 ## Data Architecture
-- **Storage**:
-  - **Cloudflare D1** (SQLite) — relational data
-  - **Cloudflare R2** — photo file bytes (key stored in `game_photos.r2_key`)
-- **Data Models**:
-  - `admin_settings` (id=1, **admin_password**, updated_at) — single-row, password changeable from UI
-  - `tournaments` (name, location, dates, description)
-  - `teams` (tournament_id, name, coach, **access_code unique**) — team password for whole-team view
-  - `players` (team_id, name, jersey_number, position, height, **access_code unique**)
-  - `games` (tournament_id, home_team_id, away_team_id, scores, date, venue)
-  - `player_stats` (game_id + player_id unique; minutes/points/rebounds/assists/steals/blocks/turnovers/fouls + FG/3P/FT made & attempted)
-  - `game_photos` (tournament_id, game_id, r2_key, caption, uploaded_by, content_type, size_bytes)
-- **Player of the Day algorithm**: highest `points + 1.2·reb + 1.5·ast + 2·stl + 2·blk − to` across all uploaded stat lines (latest game wins ties). Restrictable by tournament via `?tournament_id=`.
+- **Storage**: Cloudflare D1 (SQLite). Local dev runs against the local D1 SQLite stored under `.wrangler/state/v3/d1/`.
+- **Data models**:
+  - `tournaments(id, name, location, start_date, end_date, description, created_at)`
+  - `teams(id, tournament_id, name, coach, logo_url, created_at)`
+  - `players(id, team_id, name, jersey_number, position, height, created_at)` — no access codes
+  - `games(id, tournament_id, home_team_id, away_team_id, home_score, away_score, game_date, venue, notes, created_at)`
+  - `player_stats(id, game_id, player_id, points, rebounds, assists, created_at)` — only three stat columns, unique on `(game_id, player_id)`
+  - `admin_settings(id=1, admin_password)` — single-row table holding the current admin password (default `admin123`)
+- **Migrations**:
+  - `0001_initial_schema.sql` — initial schema
+  - `0002_admin_team_auth.sql` — added admin_settings (historical; access_code columns were dropped later)
+  - `0003_simplify.sql` — dropped game_photos, simplified `player_stats` to PTS/REB/AST, removed all access codes from `players` and `teams`
 
-## Currently Completed Features
-- Hidden admin panel at `/secure-admin-panel-x7q` (no public link)
-- Changeable admin password from the Settings tab; stored in D1, persists across deployments
-- Team passwords (auto-generated or admin-set, editable) gating a whole-team stats view
-- Per-player access codes gating the personal stats view
-- Public player landing page leads with **Player of the Day** (no login required)
-- Admin-only photo upload/delete; public viewing of photos
-- Tournament / team / player / game / stat-line CRUD
-- Player dashboard: career totals, season averages w/ shooting percentages, per-game table
-- Team dashboard: W-L record, PPG for/against, differential, roster averages sorted by PPG, game results list
-- Public tournament page with collapsible per-game box scores
+## User Guide
+1. **Browse player stats** — go to `/player`. Player of the Day is shown at the top. Below it, pick a tournament, then team, then player to see their PTS / REB / AST.
+2. **Browse team stats** — go to `/team`. Pick a tournament and team to see the W/L record and the whole roster's PTS / REB / AST.
+3. **Browse tournament details** — go to `/tournament/:id` for rosters and games; click a game to expand the per-player PTS / REB / AST box score.
+4. **Admin** — go to `/secure-admin-panel-x7q`, sign in with the admin password (default `admin123`, changeable in Settings), then use the tabs to add tournaments, teams, players, games, and stats. Stats entry asks only for PTS / REB / AST.
 
-## Features Not Yet Implemented
-- Tournament-wide leaderboard (top scorer / rebounder / etc.)
-- Photo bulk-delete and reordering
-- Public deployment to Cloudflare Pages (currently sandbox preview only — needs `setup_cloudflare_api_key` + `wrangler pages deploy`)
-- Multi-admin roles (currently a single shared admin password)
-- Excel/CSV bulk import of stat lines
-
-## Recommended Next Steps
-1. Run `setup_cloudflare_api_key`, then `npx wrangler d1 create webapp-production`, paste the returned `database_id` into `wrangler.jsonc`, `npx wrangler r2 bucket create webapp-photos`, then `npm run build && npx wrangler pages deploy dist --project-name <chosen-name>`. After deploy, run `npx wrangler d1 migrations apply webapp-production` against the remote to provision tables.
-2. Add a "Tournament Leaders" widget on `/tournament/:id` driven by SQL aggregates.
-3. Add bulk CSV stat import in the Stats tab.
+## What's NOT in the app
+- No player access codes
+- No team access codes
+- No game photo gallery
+- No advanced stats (no MIN / STL / BLK / FG / 3P / FT)
 
 ## Deployment
-- **Platform**: Cloudflare Pages + Workers + D1 + R2
-- **Status**: Running locally in sandbox (Cloudflare Pages deployment pending API key setup)
-- **Tech Stack**: Hono + JSX (SSR) + Vite + TypeScript + Tailwind (CDN) + Font Awesome (CDN) + Axios (CDN)
-- **Local Dev**: `npm run build && pm2 start ecosystem.config.cjs` → http://localhost:3000
-- **Default Admin Password**: `admin123` (change from Settings tab after first login)
-- **Sample Team Codes**: `HAWKS-2026`, `WOLVES-2026`, `KINGS-2026`, `SLAM-2026`
-- **Sample Player Codes**: `HAWK-MJ23`, `HAWK-DC11`, `WOLF-JR05`, `KING-CM07`, `SLAM-RF09`, …
-- **Last Updated**: 2026-05-10
+- **Platform**: Cloudflare Pages (Hono on Workers runtime)
+- **Status**: ❌ Not yet deployed to production
+- **Tech Stack**: Hono + TypeScript + JSX SSR + Vite + Cloudflare D1; frontend uses Tailwind CSS, Font Awesome, and Axios via CDN
+- **Last Updated**: 2026-05-11
+
+## Local Development
+```bash
+npm run build
+pm2 start ecosystem.config.cjs
+# visit http://localhost:3000
+```
+Admin password defaults to `admin123` and can be changed from the admin panel's Settings tab.
