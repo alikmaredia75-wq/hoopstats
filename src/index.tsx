@@ -60,6 +60,22 @@ app.get('/api/tournaments', async (c) => {
   return c.json({ tournaments: results })
 })
 
+// Aggregate counts for the homepage stat strip
+app.get('/api/stats/counts', async (c) => {
+  const [players, tournaments, teams, games] = await Promise.all([
+    c.env.DB.prepare('SELECT COUNT(*) as n FROM players').first<any>(),
+    c.env.DB.prepare('SELECT COUNT(*) as n FROM tournaments').first<any>(),
+    c.env.DB.prepare('SELECT COUNT(*) as n FROM teams').first<any>(),
+    c.env.DB.prepare('SELECT COUNT(*) as n FROM games').first<any>(),
+  ])
+  return c.json({
+    players: players?.n || 0,
+    tournaments: tournaments?.n || 0,
+    teams: teams?.n || 0,
+    games: games?.n || 0,
+  })
+})
+
 app.get('/api/tournaments/:id', async (c) => {
   const id = c.req.param('id')
   const t = await c.env.DB.prepare('SELECT * FROM tournaments WHERE id = ?').bind(id).first()
@@ -366,33 +382,56 @@ function HomePage() {
   return (
     <div id="page-home">
       <Header active="home" />
-      <main class="max-w-6xl mx-auto px-4 py-10">
-        <section class="text-center mb-12">
-          <h1 class="text-5xl font-bold text-orange-600 mb-4">
-            <i class="fas fa-basketball mr-3"></i>HoopStats
+      <main class="max-w-6xl mx-auto px-4 py-8">
+        {/* Hero */}
+        <section class="hero mb-8">
+          <div class="accent-bar"></div>
+          <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-white">
+            Every Point.<br/>Every Play.
           </h1>
-          <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-            Basketball tournament stats: points, rebounds, and assists. See the Player of the Day, browse any player, or pull up a whole team's stats.
+          <p class="text-lg text-muted max-w-2xl">
+            The home of basketball tournament stats. Track Player of the Day, browse any player, and pull up a whole team's averages in one click.
           </p>
+          <div class="flex flex-wrap gap-3 mt-6">
+            <a href="/player" class="btn btn-primary"><i class="fas fa-user"></i>Player Stats</a>
+            <a href="/team" class="btn btn-secondary"><i class="fas fa-users"></i>Team Stats</a>
+          </div>
         </section>
 
-        <section class="grid md:grid-cols-2 gap-6 mb-12">
-          <a href="/player" class="card hover:shadow-lg transition border-l-4 border-blue-500">
-            <i class="fas fa-user-circle text-3xl text-blue-500 mb-3"></i>
-            <h2 class="text-xl font-bold mb-2">Player Stats</h2>
-            <p class="text-gray-600">Player of the Day + pick any player to see their PTS / REB / AST.</p>
+        {/* Stat Strip */}
+        <section class="stat-strip" id="stat-strip">
+          <div class="stat-strip-item"><div class="value" id="count-players">—</div><div class="label">Players</div></div>
+          <div class="stat-strip-item"><div class="value" id="count-tournaments">—</div><div class="label">Tournaments</div></div>
+          <div class="stat-strip-item"><div class="value" id="count-teams">—</div><div class="label">Teams</div></div>
+          <div class="stat-strip-item"><div class="value" id="count-games">—</div><div class="label">Games</div></div>
+        </section>
+
+        {/* Browse Cards */}
+        <section class="grid md:grid-cols-2 gap-5 mb-10">
+          <a href="/player" class="browse-card">
+            <div class="icon"><i class="fas fa-user-circle"></i></div>
+            <h2>Player Stats</h2>
+            <p>Player of the Day on the front page, then dive into any roster spot's PTS / REB / AST.</p>
+            <span class="text-accent text-sm font-semibold mt-2 font-heading uppercase tracking-wider">Browse Players →</span>
           </a>
-          <a href="/team" class="card hover:shadow-lg transition border-l-4 border-purple-500">
-            <i class="fas fa-users text-3xl text-purple-500 mb-3"></i>
-            <h2 class="text-xl font-bold mb-2">Team Stats</h2>
-            <p class="text-gray-600">Pick a team to see the whole roster's averages and W/L record.</p>
+          <a href="/team" class="browse-card">
+            <div class="icon"><i class="fas fa-users"></i></div>
+            <h2>Team Stats</h2>
+            <p>Full roster averages, W/L record, and a per-player breakdown for every team in every tournament.</p>
+            <span class="text-accent text-sm font-semibold mt-2 font-heading uppercase tracking-wider">Browse Teams →</span>
           </a>
         </section>
 
+        {/* Tournaments */}
         <section>
-          <h2 class="text-2xl font-bold mb-4"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Tournaments</h2>
+          <div class="flex items-end justify-between mb-5">
+            <div>
+              <div class="text-accent font-heading text-sm uppercase tracking-widest font-bold">Compete</div>
+              <h2 class="text-3xl font-heading font-bold uppercase text-white">Tournaments</h2>
+            </div>
+          </div>
           <div id="tournaments-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="text-gray-500">Loading tournaments...</div>
+            <div class="text-muted col-span-full">Loading tournaments...</div>
           </div>
         </section>
       </main>
@@ -406,8 +445,11 @@ function AdminPage() {
     <div id="page-admin">
       <Header showAdmin={true} active="admin" />
       <main class="max-w-6xl mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6"><i class="fas fa-clipboard-list text-orange-500 mr-2"></i>Admin Panel</h1>
-        <div id="admin-app">Loading...</div>
+        <div class="mb-6">
+          <div class="text-accent font-heading text-sm uppercase tracking-widest font-bold">Control</div>
+          <h1 class="text-4xl font-heading font-bold uppercase text-white">Admin Panel</h1>
+        </div>
+        <div id="admin-app" class="text-muted">Loading...</div>
       </main>
       <script src="/static/admin.js"></script>
     </div>
@@ -418,7 +460,11 @@ function PlayerPage() {
   return (
     <div id="page-player">
       <Header active="player" />
-      <main class="max-w-5xl mx-auto px-4 py-8">
+      <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="mb-6">
+          <div class="text-accent font-heading text-sm uppercase tracking-widest font-bold">Spotlight</div>
+          <h1 class="text-4xl font-heading font-bold uppercase text-white">Player Stats</h1>
+        </div>
         <div id="player-app">Loading...</div>
       </main>
       <script src="/static/player.js"></script>
@@ -431,7 +477,10 @@ function TeamPage() {
     <div id="page-team">
       <Header active="team" />
       <main class="max-w-6xl mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6"><i class="fas fa-users text-purple-500 mr-2"></i>Team Stats</h1>
+        <div class="mb-6">
+          <div class="text-accent font-heading text-sm uppercase tracking-widest font-bold">Together</div>
+          <h1 class="text-4xl font-heading font-bold uppercase text-white">Team Stats</h1>
+        </div>
         <div id="team-app">Loading...</div>
       </main>
       <script src="/static/team.js"></script>
@@ -444,7 +493,7 @@ function TournamentPage({ id }: { id: string }) {
     <div id="page-tournament" data-tournament-id={id}>
       <Header />
       <main class="max-w-6xl mx-auto px-4 py-8">
-        <div id="tournament-app">Loading...</div>
+        <div id="tournament-app" class="text-muted">Loading...</div>
       </main>
       <script src="/static/tournament.js"></script>
     </div>
@@ -453,16 +502,18 @@ function TournamentPage({ id }: { id: string }) {
 
 function Header({ showAdmin = false, active = '' }: { showAdmin?: boolean, active?: string }) {
   const linkClass = (key: string) =>
-    active === key
-      ? 'text-orange-500 hover:text-orange-400'
-      : 'text-white hover:text-orange-300'
+    'font-heading uppercase tracking-wider text-sm font-semibold transition ' + (
+      active === key
+        ? 'text-accent'
+        : 'text-white hover:text-accent'
+    )
   return (
-    <header class="bg-black text-white shadow-lg">
-      <nav class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
-        <a href="/" class="text-2xl font-bold flex items-center text-white">
-          <i class="fas fa-basketball mr-2 text-orange-500"></i>HoopStats
+    <header class="bg-black border-b border-navy-border sticky top-0 z-30">
+      <nav class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between">
+        <a href="/" class="text-2xl font-heading font-bold flex items-center text-white uppercase tracking-wide">
+          <i class="fas fa-basketball mr-2 text-accent"></i>Hoop<span class="text-accent">Stats</span>
         </a>
-        <div class="flex gap-4 text-sm font-medium">
+        <div class="flex gap-6 items-center">
           <a href="/" class={linkClass('home')}><i class="fas fa-home mr-1"></i>Home</a>
           <a href="/player" class={linkClass('player')}><i class="fas fa-user mr-1"></i>Player</a>
           <a href="/team" class={linkClass('team')}><i class="fas fa-users mr-1"></i>Team</a>
