@@ -1,4 +1,4 @@
-// Player page — Player of the Day + dropdown-based player selection (no login)
+// Player page — Player of the Day + dropdown-based player selection (redesigned)
 const root = document.getElementById('player-app')
 
 const state = {
@@ -12,28 +12,26 @@ const state = {
 
 function render() {
   root.innerHTML = `
-    <section id="potd-section" class="mb-8">
-      <div class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading Player of the Day...</div>
-    </section>
+    <div id="potd-section" style="margin-bottom:28px">
+      <div style="color:var(--muted);padding:20px 0"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>Loading Player of the Day...</div>
+    </div>
 
-    <section class="card">
-      <h2 class="text-2xl font-bold mb-4">
-        <i class="fas fa-user-circle text-blue-500 mr-2"></i>Find a Player
-      </h2>
-      <p class="text-gray-600 mb-4 text-sm">Pick a tournament, team, and player to see their PTS / REB / AST.</p>
-      <div class="grid md:grid-cols-3 gap-3 mb-4">
-        <select id="sel-tournament" class="border rounded px-3 py-2">
+    <div class="section-heading">Find a Player</div>
+    <div class="card" style="margin-bottom:20px">
+      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a tournament, team, and player to see their PTS / REB / AST.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:4px">
+        <select id="sel-tournament">
           <option value="">Select tournament...</option>
         </select>
-        <select id="sel-team" class="border rounded px-3 py-2" disabled>
+        <select id="sel-team" disabled>
           <option value="">Select team...</option>
         </select>
-        <select id="sel-player" class="border rounded px-3 py-2" disabled>
+        <select id="sel-player" disabled>
           <option value="">Select player...</option>
         </select>
       </div>
-      <div id="player-detail"></div>
-    </section>
+    </div>
+    <div id="player-detail"></div>
   `
 
   document.getElementById('sel-tournament').addEventListener('change', onTournamentChange)
@@ -48,39 +46,36 @@ async function loadPOTD() {
     const section = document.getElementById('potd-section')
     if (!p) {
       section.innerHTML = `
-        <div class="card bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500">
-          <h2 class="text-2xl font-bold mb-2"><i class="fas fa-star text-yellow-500 mr-2"></i>Player of the Day</h2>
-          <p class="text-gray-600">No stats recorded yet.</p>
+        <div class="potd-card">
+          <div class="potd-label">⚡ Player of the Day</div>
+          <div style="color:var(--muted);font-size:14px">No stats recorded yet.</div>
         </div>`
       return
     }
-    const total = (p.points || 0) + (p.rebounds || 0) + (p.assists || 0)
     section.innerHTML = `
-      <div class="card bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500">
-        <h2 class="text-2xl font-bold mb-3"><i class="fas fa-star text-yellow-500 mr-2"></i>Player of the Day</h2>
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div class="text-3xl font-bold text-orange-700">${escapeHTML(p.player_name)}</div>
-            <div class="text-gray-700 mt-1">
-              #${p.jersey_number ?? '—'} • ${escapeHTML(p.team_name || '')}
-              ${p.position ? ' • ' + escapeHTML(p.position) : ''}
-            </div>
-            <div class="text-sm text-gray-500 mt-1">
-              ${escapeHTML(p.home_team_name)} ${p.home_score} – ${p.away_score} ${escapeHTML(p.away_team_name)}
-              ${p.game_date ? ' • ' + escapeHTML(p.game_date) : ''}
-            </div>
+      <div class="potd-card">
+        <div class="potd-label">⚡ Player of the Day</div>
+        <div class="potd-name">${escapeHTML(p.player_name)}</div>
+        <div class="potd-meta">
+          #${p.jersey_number ?? '—'} · ${escapeHTML(p.team_name || '')}${p.position ? ' · ' + escapeHTML(p.position) : ''}
+          ${p.game_date ? ' · ' + escapeHTML(p.game_date) : ''}
+        </div>
+        <div class="stat-pills">
+          <div class="stat-pill"><div class="stat-pill-val">${p.points}</div><div class="stat-pill-label">PTS</div></div>
+          <div class="stat-pill"><div class="stat-pill-val">${p.rebounds}</div><div class="stat-pill-label">REB</div></div>
+          <div class="stat-pill"><div class="stat-pill-val">${p.assists}</div><div class="stat-pill-label">AST</div></div>
+          <div class="stat-pill" style="border-color:rgba(232,82,10,0.3);background:rgba(232,82,10,0.1)">
+            <div class="stat-pill-val" style="color:var(--orange)">${(p.points||0)+(p.rebounds||0)+(p.assists||0)}</div>
+            <div class="stat-pill-label">SUM</div>
           </div>
-          <div class="flex gap-3 text-center">
-            <div class="bg-white rounded-lg px-4 py-3 shadow"><div class="text-3xl font-bold text-orange-600">${p.points}</div><div class="text-xs text-gray-500">PTS</div></div>
-            <div class="bg-white rounded-lg px-4 py-3 shadow"><div class="text-3xl font-bold text-blue-600">${p.rebounds}</div><div class="text-xs text-gray-500">REB</div></div>
-            <div class="bg-white rounded-lg px-4 py-3 shadow"><div class="text-3xl font-bold text-purple-600">${p.assists}</div><div class="text-xs text-gray-500">AST</div></div>
-            <div class="bg-yellow-100 rounded-lg px-4 py-3 shadow"><div class="text-3xl font-bold text-yellow-700">${total}</div><div class="text-xs text-gray-600">SUM</div></div>
-          </div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+          ${escapeHTML(p.home_team_name)} ${p.home_score} – ${p.away_score} ${escapeHTML(p.away_team_name)}
         </div>
       </div>
     `
   } catch (e) {
-    document.getElementById('potd-section').innerHTML = `<div class="text-red-600">Failed to load Player of the Day.</div>`
+    document.getElementById('potd-section').innerHTML = `<div class="alert alert-error">Failed to load Player of the Day.</div>`
   }
 }
 
@@ -141,60 +136,66 @@ async function onPlayerChange(e) {
 
 async function loadPlayerDetail(playerId) {
   const target = document.getElementById('player-detail')
-  target.innerHTML = '<div class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</div>'
+  target.innerHTML = '<div style="color:var(--muted);padding:16px 0"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>Loading...</div>'
   try {
     const { data } = await axios.get('/api/player/' + playerId + '/stats')
     const { player, games, totals, averages } = data
+
+    const initials = player.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+
     target.innerHTML = `
-      <div class="mt-6 pt-6 border-t">
-        <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-          <h3 class="text-2xl font-bold">${escapeHTML(player.name)}</h3>
-          <div class="text-gray-600">
-            #${player.jersey_number ?? '—'} • ${escapeHTML(player.team_name || '')}
-            ${player.position ? ' • ' + escapeHTML(player.position) : ''}
-            ${player.height ? ' • ' + escapeHTML(player.height) : ''}
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div style="width:56px;height:56px;border-radius:50%;background:rgba(232,82,10,0.2);border:2px solid rgba(232,82,10,0.4);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange-light);flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1">${escapeHTML(player.name)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:3px">
+              #${player.jersey_number ?? '—'} · ${escapeHTML(player.team_name || '')}${player.position ? ' · ' + escapeHTML(player.position) : ''}${player.height ? ' · ' + escapeHTML(player.height) : ''}
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div class="card text-center"><div class="text-3xl font-bold text-gray-700">${totals.games}</div><div class="text-xs text-gray-500 uppercase">Games</div></div>
-          <div class="card text-center"><div class="text-3xl font-bold text-orange-600">${averages ? averages.points : '—'}</div><div class="text-xs text-gray-500 uppercase">PPG</div></div>
-          <div class="card text-center"><div class="text-3xl font-bold text-blue-600">${averages ? averages.rebounds : '—'}</div><div class="text-xs text-gray-500 uppercase">RPG</div></div>
-          <div class="card text-center"><div class="text-3xl font-bold text-purple-600">${averages ? averages.assists : '—'}</div><div class="text-xs text-gray-500 uppercase">APG</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">
+          <div class="stat-box"><div class="value" style="color:var(--cream)">${totals.games}</div><div class="label-text">Games</div></div>
+          <div class="stat-box"><div class="value">${averages ? averages.points : '—'}</div><div class="label-text">PPG</div></div>
+          <div class="stat-box"><div class="value" style="color:#60a5fa">${averages ? averages.rebounds : '—'}</div><div class="label-text">RPG</div></div>
+          <div class="stat-box"><div class="value" style="color:#a78bfa">${averages ? averages.assists : '—'}</div><div class="label-text">APG</div></div>
         </div>
 
-        <h4 class="text-lg font-bold mb-2">Game Log</h4>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin-bottom:10px;color:var(--cream)">Game Log</div>
         ${games.length === 0
-          ? '<div class="text-gray-500">No games recorded yet.</div>'
-          : `<div class="overflow-x-auto"><table class="w-full text-sm">
-              <thead class="bg-gray-100"><tr>
-                <th class="text-left p-2">Date</th>
-                <th class="text-left p-2">Matchup</th>
-                <th class="text-right p-2">PTS</th>
-                <th class="text-right p-2">REB</th>
-                <th class="text-right p-2">AST</th>
-              </tr></thead>
-              <tbody>${games.map(g => `
-                <tr class="border-b">
-                  <td class="p-2">${escapeHTML(g.game_date || '—')}</td>
-                  <td class="p-2">${escapeHTML(g.home_team_name)} ${g.home_score}–${g.away_score} ${escapeHTML(g.away_team_name)}</td>
-                  <td class="p-2 text-right font-semibold">${g.points}</td>
-                  <td class="p-2 text-right">${g.rebounds}</td>
-                  <td class="p-2 text-right">${g.assists}</td>
-                </tr>`).join('')}
-              </tbody>
-            </table></div>`
+          ? '<div style="color:var(--muted);font-size:14px">No games recorded yet.</div>'
+          : `<div style="overflow-x:auto">
+              <table>
+                <thead><tr>
+                  <th style="text-align:left">Date</th>
+                  <th style="text-align:left">Matchup</th>
+                  <th style="text-align:right">PTS</th>
+                  <th style="text-align:right">REB</th>
+                  <th style="text-align:right">AST</th>
+                </tr></thead>
+                <tbody>${games.map(g => `
+                  <tr>
+                    <td style="color:var(--muted)">${escapeHTML(g.game_date || '—')}</td>
+                    <td>${escapeHTML(g.home_team_name)} ${g.home_score}–${g.away_score} ${escapeHTML(g.away_team_name)}</td>
+                    <td style="text-align:right;font-weight:700;color:var(--orange)">${g.points}</td>
+                    <td style="text-align:right;color:#60a5fa">${g.rebounds}</td>
+                    <td style="text-align:right;color:#a78bfa">${g.assists}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`
         }
 
-        <div class="mt-4 pt-4 border-t flex flex-wrap gap-6 text-sm text-gray-700">
-          <div><b>Total PTS:</b> ${totals.points}</div>
-          <div><b>Total REB:</b> ${totals.rebounds}</div>
-          <div><b>Total AST:</b> ${totals.assists}</div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--navy-border);display:flex;flex-wrap:wrap;gap:20px;font-size:13px;color:var(--muted)">
+          <div><span style="color:var(--cream);font-weight:600">Total PTS:</span> ${totals.points}</div>
+          <div><span style="color:var(--cream);font-weight:600">Total REB:</span> ${totals.rebounds}</div>
+          <div><span style="color:var(--cream);font-weight:600">Total AST:</span> ${totals.assists}</div>
         </div>
       </div>
     `
   } catch (err) {
-    target.innerHTML = '<div class="text-red-600">Failed to load player stats.</div>'
+    target.innerHTML = '<div class="alert alert-error">Failed to load player stats.</div>'
   }
 }
 
