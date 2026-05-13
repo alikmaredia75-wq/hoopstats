@@ -365,7 +365,7 @@ app.get('/admin', (c) => c.redirect('/player'))
 function HomePage() {
   return (
     <div id="page-home">
-      <Header />
+      <Header active="home" />
       <main class="max-w-6xl mx-auto px-4 py-10">
         <section class="text-center mb-12">
           <h1 class="text-5xl font-bold text-orange-600 mb-4">
@@ -404,7 +404,7 @@ function HomePage() {
 function AdminPage() {
   return (
     <div id="page-admin">
-      <Header showAdmin={true} />
+      <Header showAdmin={true} active="admin" />
       <main class="max-w-6xl mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-6"><i class="fas fa-clipboard-list text-orange-500 mr-2"></i>Admin Panel</h1>
         <div id="admin-app">Loading...</div>
@@ -417,7 +417,7 @@ function AdminPage() {
 function PlayerPage() {
   return (
     <div id="page-player">
-      <Header />
+      <Header active="player" />
       <main class="max-w-5xl mx-auto px-4 py-8">
         <div id="player-app">Loading...</div>
       </main>
@@ -429,7 +429,7 @@ function PlayerPage() {
 function TeamPage() {
   return (
     <div id="page-team">
-      <Header />
+      <Header active="team" />
       <main class="max-w-6xl mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-6"><i class="fas fa-users text-purple-500 mr-2"></i>Team Stats</h1>
         <div id="team-app">Loading...</div>
@@ -451,18 +451,22 @@ function TournamentPage({ id }: { id: string }) {
   )
 }
 
-function Header({ showAdmin = false }: { showAdmin?: boolean }) {
+function Header({ showAdmin = false, active = '' }: { showAdmin?: boolean, active?: string }) {
+  const linkClass = (key: string) =>
+    active === key
+      ? 'text-orange-500 hover:text-orange-400'
+      : 'text-white hover:text-orange-300'
   return (
-    <header class="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg">
+    <header class="bg-black text-white shadow-lg">
       <nav class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
-        <a href="/" class="text-2xl font-bold flex items-center">
-          <i class="fas fa-basketball mr-2"></i>HoopStats
+        <a href="/" class="text-2xl font-bold flex items-center text-white">
+          <i class="fas fa-basketball mr-2 text-orange-500"></i>HoopStats
         </a>
         <div class="flex gap-4 text-sm font-medium">
-          <a href="/" class="hover:text-orange-100"><i class="fas fa-home mr-1"></i>Home</a>
-          <a href="/player" class="hover:text-orange-100"><i class="fas fa-user mr-1"></i>Player</a>
-          <a href="/team" class="hover:text-orange-100"><i class="fas fa-users mr-1"></i>Team</a>
-          {showAdmin && <a href="/secure-admin-panel-x7q" class="hover:text-orange-100"><i class="fas fa-cog mr-1"></i>Admin</a>}
+          <a href="/" class={linkClass('home')}><i class="fas fa-home mr-1"></i>Home</a>
+          <a href="/player" class={linkClass('player')}><i class="fas fa-user mr-1"></i>Player</a>
+          <a href="/team" class={linkClass('team')}><i class="fas fa-users mr-1"></i>Team</a>
+          {showAdmin && <a href="/secure-admin-panel-x7q" class={linkClass('admin')}><i class="fas fa-cog mr-1"></i>Admin</a>}
         </div>
       </nav>
     </header>
