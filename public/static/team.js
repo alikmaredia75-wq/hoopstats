@@ -1,55 +1,32 @@
-// Team page — dropdown-based team selection (redesigned)
+// Team page — single team dropdown (tournaments hidden from public)
 const root = document.getElementById('team-app')
 
 const state = {
-  tournaments: [],
   teams: [],
-  selectedTournamentId: '',
   selectedTeamId: '',
 }
 
 function render() {
   root.innerHTML = `
     <div class="card" style="margin-bottom:20px">
-      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a tournament and team to see the whole roster's PTS / REB / AST averages and record.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <select id="sel-tournament">
-          <option value="">Select tournament...</option>
-        </select>
-        <select id="sel-team" disabled>
+      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a team to see the whole roster's PTS / REB / AST averages and record.</p>
+      <div style="display:grid;grid-template-columns:1fr;gap:10px">
+        <select id="sel-team">
           <option value="">Select team...</option>
         </select>
       </div>
     </div>
     <div id="team-detail"></div>
   `
-  document.getElementById('sel-tournament').addEventListener('change', onTournamentChange)
   document.getElementById('sel-team').addEventListener('change', onTeamChange)
 }
 
-async function loadTournaments() {
-  const { data } = await axios.get('/api/tournaments')
-  state.tournaments = data.tournaments || []
-  const sel = document.getElementById('sel-tournament')
-  sel.innerHTML = '<option value="">Select tournament...</option>' +
-    state.tournaments.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
-}
-
-async function onTournamentChange(e) {
-  state.selectedTournamentId = e.target.value
-  state.selectedTeamId = ''
-  document.getElementById('team-detail').innerHTML = ''
-  const selTeam = document.getElementById('sel-team')
-  if (!state.selectedTournamentId) {
-    selTeam.innerHTML = '<option value="">Select team...</option>'
-    selTeam.disabled = true
-    return
-  }
-  const { data } = await axios.get('/api/tournaments/' + state.selectedTournamentId)
+async function loadTeams() {
+  const { data } = await axios.get('/api/teams')
   state.teams = data.teams || []
-  selTeam.innerHTML = '<option value="">Select team...</option>' +
+  const sel = document.getElementById('sel-team')
+  sel.innerHTML = '<option value="">Select team...</option>' +
     state.teams.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
-  selTeam.disabled = false
 }
 
 async function onTeamChange(e) {
@@ -71,23 +48,11 @@ async function loadTeamDetail(teamId) {
     const totalGames = record.wins + record.losses
     const winPct = totalGames > 0 ? Math.round((record.wins / totalGames) * 100) : 0
 
-    // Team averages across all players
-    let totalPts = 0, totalReb = 0, totalAst = 0, playerCount = 0
-    for (const p of players) {
-      if (p.averages) {
-        totalPts += p.averages.points
-        totalReb += p.averages.rebounds
-        totalAst += p.averages.assists
-        playerCount++
-      }
-    }
-
     target.innerHTML = `
       <!-- Team Header -->
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800">${escapeHTML(team.name)}</div>
-          <div style="font-size:13px;color:var(--muted)">${escapeHTML(team.tournament_name || '')}</div>
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -116,7 +81,6 @@ async function loadTeamDetail(teamId) {
                 <thead><tr>
                   <th style="text-align:left">#</th>
                   <th style="text-align:left">Player</th>
-                  <th style="text-align:left">Pos</th>
                   <th style="text-align:right">GP</th>
                   <th style="text-align:right">PPG</th>
                   <th style="text-align:right">RPG</th>
@@ -136,7 +100,6 @@ async function loadTeamDetail(teamId) {
                         </div>
                       </td>
                       <td style="font-weight:600">${escapeHTML(p.player.name)}</td>
-                      <td style="color:var(--muted)">${escapeHTML(p.player.position || '—')}</td>
                       <td style="text-align:right;color:var(--muted)">${p.totals.games}</td>
                       <td style="text-align:right">
                         <div style="color:var(--orange);font-weight:700">${p.averages ? p.averages.points : '—'}</div>
@@ -188,4 +151,4 @@ function escapeHTML(s) {
 }
 
 render()
-loadTournaments()
+loadTeams()

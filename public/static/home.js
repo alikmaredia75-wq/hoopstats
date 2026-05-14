@@ -1,58 +1,15 @@
-// Home page - list tournaments (redesigned)
-async function loadTournaments() {
-  const container = document.getElementById('tournaments-list');
-  try {
-    const { data } = await axios.get('/api/tournaments');
-    if (!data.tournaments || data.tournaments.length === 0) {
-      container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted)">
-          <i class="fas fa-info-circle" style="margin-right:8px"></i>No tournaments yet.
-        </div>`;
-      return;
-    }
-
-    // Determine badge for each tournament based on dates
-    container.innerHTML = data.tournaments.map(t => {
-      const badge = getTournamentBadge(t);
-      return `
-        <div class="card" style="cursor:default">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">${escapeHtml(t.name)}</h3>
-            ${badge}
-          </div>
-          ${t.location ? `<p style="font-size:13px;color:var(--muted);margin-bottom:4px"><i class="fas fa-map-marker-alt" style="margin-right:6px;color:var(--orange)"></i>${escapeHtml(t.location)}</p>` : ''}
-          ${t.start_date ? `<p style="font-size:13px;color:var(--muted);margin-bottom:10px"><i class="fas fa-calendar" style="margin-right:6px;color:var(--orange)"></i>${escapeHtml(t.start_date)}${t.end_date ? ' – ' + escapeHtml(t.end_date) : ''}</p>` : ''}
-          ${t.description ? `<p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${escapeHtml(t.description)}</p>` : ''}
-          <a href="/tournament/${t.id}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i>View</a>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    container.innerHTML = `<div class="alert alert-error">Failed to load tournaments</div>`;
-  }
-}
-
-function getTournamentBadge(t) {
-  if (!t.start_date && !t.end_date) return '';
-  const now = new Date();
-  const start = t.start_date ? new Date(t.start_date) : null;
-  const end = t.end_date ? new Date(t.end_date) : null;
-  if (end && now > end) return '<span class="badge badge-done">Completed</span>';
-  if (start && now < start) return '<span class="badge badge-upcoming">Upcoming</span>';
-  return '<span class="badge badge-active">● Active</span>';
-}
-
+// Home page - hero + browse cards (tournaments hidden from public view)
 function escapeHtml(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
-// Inject hero section above tournaments
+// Inject hero + browse cards, and remove any leftover tournaments section
 function buildHero() {
   const main = document.querySelector('main');
   if (!main) return;
 
-  // Replace the generic hero with our styled one
+  // Replace the generic hero with our styled one (3-chip stat strip — no Tournaments)
   const heroSection = main.querySelector('section:first-child');
   if (heroSection) {
     heroSection.outerHTML = `
@@ -60,11 +17,10 @@ function buildHero() {
         <div class="hero-eyebrow">Tournament Tracker</div>
         <div class="hero-title">Every Point.<br>Every Play.</div>
         <div class="hero-sub">Basketball tournament stats — points, rebounds, and assists. Find your player, scout your opponent, track your team.</div>
-        <div class="stat-strip" id="stat-strip">
+        <div class="stat-strip stat-strip-3" id="stat-strip">
           <div class="stat-chip"><div class="stat-chip-num" id="count-players">—</div><div class="stat-chip-label">Players</div></div>
-          <div class="stat-chip"><div class="stat-chip-num" id="count-tournaments">—</div><div class="stat-chip-label">Tournaments</div></div>
           <div class="stat-chip"><div class="stat-chip-num" id="count-teams">—</div><div class="stat-chip-label">Teams</div></div>
-          <div class="stat-chip"><div class="stat-chip-num">—</div><div class="stat-chip-label">Games Played</div></div>
+          <div class="stat-chip"><div class="stat-chip-num" id="count-games">—</div><div class="stat-chip-label">Games Played</div></div>
         </div>
       </section>
     `;
@@ -90,39 +46,27 @@ function buildHero() {
     `;
   }
 
-  // Style tournaments section header
-  const tourSection = main.querySelector('section:last-child');
-  if (tourSection) {
-    const heading = tourSection.querySelector('h2');
-    if (heading) {
-      heading.className = '';
-      heading.style.cssText = 'font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px';
-      heading.innerHTML = 'Tournaments <span style="flex:1;height:1px;background:rgba(255,255,255,0.07);display:block"></span>';
+  // Remove any leftover tournaments section that may have been server-rendered
+  const sections = main.querySelectorAll('section');
+  sections.forEach(sec => {
+    const h = sec.querySelector('h1, h2, h3');
+    if (h && /tournaments?/i.test(h.textContent || '')) {
+      sec.remove();
     }
-    const grid = tourSection.querySelector('#tournaments-list');
-    if (grid) {
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px';
-    }
-  }
+    const list = sec.querySelector('#tournaments-list');
+    if (list) sec.remove();
+  });
 }
 
 async function loadCounts() {
   try {
-    const [tourRes, playerRes] = await Promise.all([
-      axios.get('/api/tournaments'),
-      axios.get('/api/players')
-    ]);
-    const tournaments = tourRes.data.tournaments || [];
-    const players = playerRes.data.players || [];
-    const teamIds = new Set(players.map(p => p.team_id));
-
+    const { data } = await axios.get('/api/stats/counts');
     const el = id => document.getElementById(id);
-    if (el('count-players')) el('count-players').textContent = players.length;
-    if (el('count-tournaments')) el('count-tournaments').textContent = tournaments.length;
-    if (el('count-teams')) el('count-teams').textContent = teamIds.size;
-  } catch(e) {}
+    if (el('count-players')) el('count-players').textContent = data.players ?? 0;
+    if (el('count-teams')) el('count-teams').textContent = data.teams ?? 0;
+    if (el('count-games')) el('count-games').textContent = data.games ?? 0;
+  } catch (e) {}
 }
 
 buildHero();
-loadTournaments();
 loadCounts();

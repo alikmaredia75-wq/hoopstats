@@ -74,7 +74,6 @@ function render(data, teamsWithPlayers) {
                     <li class="py-1 border-b border-navy-border last:border-0 flex items-center gap-2">
                       <span class="font-heading font-bold text-accent w-8">${p.jersey_number ? '#' + p.jersey_number : ''}</span>
                       <span class="text-white">${escapeHtml(p.name)}</span>
-                      ${p.position ? `<span class="text-muted text-xs"> · ${escapeHtml(p.position)}</span>` : ''}
                     </li>
                   `).join('')}
                 </ul>

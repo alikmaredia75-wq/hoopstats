@@ -1,11 +1,9 @@
-// Player page — Player of the Day + dropdown-based player selection (redesigned)
+// Player page — Player of the Day + team/player dropdowns (tournaments hidden from public)
 const root = document.getElementById('player-app')
 
 const state = {
-  tournaments: [],
   teams: [],
   players: [],
-  selectedTournamentId: '',
   selectedTeamId: '',
   selectedPlayerId: '',
 }
@@ -18,12 +16,9 @@ function render() {
 
     <div class="section-heading">Find a Player</div>
     <div class="card" style="margin-bottom:20px">
-      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a tournament, team, and player to see their PTS / REB / AST.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:4px">
-        <select id="sel-tournament">
-          <option value="">Select tournament...</option>
-        </select>
-        <select id="sel-team" disabled>
+      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a team and player to see their PTS / REB / AST.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:4px">
+        <select id="sel-team">
           <option value="">Select team...</option>
         </select>
         <select id="sel-player" disabled>
@@ -34,7 +29,6 @@ function render() {
     <div id="player-detail"></div>
   `
 
-  document.getElementById('sel-tournament').addEventListener('change', onTournamentChange)
   document.getElementById('sel-team').addEventListener('change', onTeamChange)
   document.getElementById('sel-player').addEventListener('change', onPlayerChange)
 }
@@ -57,7 +51,7 @@ async function loadPOTD() {
         <div class="potd-label">⚡ Player of the Day</div>
         <div class="potd-name">${escapeHTML(p.player_name)}</div>
         <div class="potd-meta">
-          #${p.jersey_number ?? '—'} · ${escapeHTML(p.team_name || '')}${p.position ? ' · ' + escapeHTML(p.position) : ''}
+          #${p.jersey_number ?? '—'} · ${escapeHTML(p.team_name || '')}
           ${p.game_date ? ' · ' + escapeHTML(p.game_date) : ''}
         </div>
         <div class="stat-pills">
@@ -79,33 +73,12 @@ async function loadPOTD() {
   }
 }
 
-async function loadTournaments() {
-  const { data } = await axios.get('/api/tournaments')
-  state.tournaments = data.tournaments || []
-  const sel = document.getElementById('sel-tournament')
-  sel.innerHTML = '<option value="">Select tournament...</option>' +
-    state.tournaments.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
-}
-
-async function onTournamentChange(e) {
-  state.selectedTournamentId = e.target.value
-  state.selectedTeamId = ''
-  state.selectedPlayerId = ''
-  document.getElementById('player-detail').innerHTML = ''
-  const selTeam = document.getElementById('sel-team')
-  const selPlayer = document.getElementById('sel-player')
-  selPlayer.innerHTML = '<option value="">Select player...</option>'
-  selPlayer.disabled = true
-  if (!state.selectedTournamentId) {
-    selTeam.innerHTML = '<option value="">Select team...</option>'
-    selTeam.disabled = true
-    return
-  }
-  const { data } = await axios.get('/api/tournaments/' + state.selectedTournamentId)
+async function loadTeams() {
+  const { data } = await axios.get('/api/teams')
   state.teams = data.teams || []
-  selTeam.innerHTML = '<option value="">Select team...</option>' +
+  const sel = document.getElementById('sel-team')
+  sel.innerHTML = '<option value="">Select team...</option>' +
     state.teams.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
-  selTeam.disabled = false
 }
 
 async function onTeamChange(e) {
@@ -150,7 +123,7 @@ async function loadPlayerDetail(playerId) {
           <div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1">${escapeHTML(player.name)}</div>
             <div style="font-size:13px;color:var(--muted);margin-top:3px">
-              #${player.jersey_number ?? '—'} · ${escapeHTML(player.team_name || '')}${player.position ? ' · ' + escapeHTML(player.position) : ''}${player.height ? ' · ' + escapeHTML(player.height) : ''}
+              #${player.jersey_number ?? '—'} · ${escapeHTML(player.team_name || '')}
             </div>
           </div>
         </div>
@@ -206,4 +179,4 @@ function escapeHTML(s) {
 
 render()
 loadPOTD()
-loadTournaments()
+loadTeams()

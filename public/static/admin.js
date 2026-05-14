@@ -249,11 +249,9 @@ function renderPlayerFormArea() {
   const area = document.getElementById('pl-form-area')
   if (!state.selectedTeamForPlayer) { area.innerHTML = ''; return }
   area.innerHTML = `
-    <div class="grid md:grid-cols-5 gap-2">
+    <div class="grid md:grid-cols-3 gap-2">
       <input id="p-name" class="" placeholder="Player name" />
       <input id="p-num" type="number" class="" placeholder="Jersey #" />
-      <input id="p-pos" class="" placeholder="Pos" />
-      <input id="p-ht" class="" placeholder='Height (e.g. 6"1\\')' />
       <button id="p-add" class="btn btn-primary">Add Player</button>
     </div>
   `
@@ -264,13 +262,9 @@ function renderPlayerFormArea() {
       team_id: state.selectedTeamForPlayer,
       name,
       jersey_number: document.getElementById('p-num').value || null,
-      position: document.getElementById('p-pos').value.trim() || null,
-      height: document.getElementById('p-ht').value.trim() || null,
     }, { headers: authHeaders() })
     document.getElementById('p-name').value = ''
     document.getElementById('p-num').value = ''
-    document.getElementById('p-pos').value = ''
-    document.getElementById('p-ht').value = ''
     await loadPlayers(state.selectedTeamForPlayer)
     renderPlayerList()
   }
@@ -284,14 +278,12 @@ function renderPlayerList() {
     ${state.players.length === 0
       ? '<div class="text-muted">No players yet.</div>'
       : `<table class="w-full text-sm">
-          <thead style="background:var(--navy)"><tr><th class="text-left p-2">ID</th><th class="text-left p-2">#</th><th class="text-left p-2">Name</th><th class="text-left p-2">Pos</th><th class="text-left p-2">Height</th><th class="p-2"></th></tr></thead>
+          <thead style="background:var(--navy)"><tr><th class="text-left p-2">ID</th><th class="text-left p-2">#</th><th class="text-left p-2">Name</th><th class="p-2"></th></tr></thead>
           <tbody>${state.players.map(p => `
             <tr class="border-b" style="border-color:var(--navy-border)">
               <td class="p-2">${p.id}</td>
               <td class="p-2">${p.jersey_number ?? '—'}</td>
               <td class="p-2">${escapeHTML(p.name)}</td>
-              <td class="p-2">${escapeHTML(p.position || '')}</td>
-              <td class="p-2">${escapeHTML(p.height || '')}</td>
               <td class="p-2 text-right"><button class="text-red-400 hover:text-red-300 font-heading uppercase text-xs" data-del-p="${p.id}">Delete</button></td>
             </tr>
           `).join('')}</tbody>

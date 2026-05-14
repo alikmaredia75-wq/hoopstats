@@ -110,11 +110,23 @@ app.delete('/api/tournaments/:id', async (c) => {
 })
 
 // ---------- Teams ----------
+// List all teams (with tournament name) — used by public team page
+app.get('/api/teams', async (c) => {
+  const { results } = await c.env.DB.prepare(`
+    SELECT t.id, t.name, t.coach, t.tournament_id,
+           tr.name as tournament_name
+    FROM teams t
+    LEFT JOIN tournaments tr ON tr.id = t.tournament_id
+    ORDER BY t.name
+  `).all()
+  return c.json({ teams: results })
+})
+
 app.get('/api/teams/:id', async (c) => {
   const id = c.req.param('id')
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(id).first()
   if (!team) return c.json({ error: 'Team not found' }, 404)
-  const players = await c.env.DB.prepare('SELECT id, team_id, name, jersey_number, position, height FROM players WHERE team_id = ? ORDER BY jersey_number').bind(id).all()
+  const players = await c.env.DB.prepare('SELECT id, team_id, name, jersey_number FROM players WHERE team_id = ? ORDER BY jersey_number').bind(id).all()
   return c.json({ team, players: players.results })
 })
 
@@ -147,7 +159,7 @@ app.get('/api/team/:id/stats', async (c) => {
   if (!team) return c.json({ error: 'Team not found' }, 404)
 
   const players = await c.env.DB.prepare(
-    'SELECT id, team_id, name, jersey_number, position, height FROM players WHERE team_id = ? ORDER BY jersey_number'
+    'SELECT id, team_id, name, jersey_number FROM players WHERE team_id = ? ORDER BY jersey_number'
   ).bind(id).all()
 
   const playerTotals: any[] = []
@@ -201,7 +213,7 @@ app.get('/api/players', async (c) => {
   const tournament_id = c.req.query('tournament_id')
   const team_id = c.req.query('team_id')
   let query = `
-    SELECT p.id, p.team_id, p.name, p.jersey_number, p.position, p.height, p.created_at,
+    SELECT p.id, p.team_id, p.name, p.jersey_number, p.created_at,
            t.name as team_name, t.tournament_id
     FROM players p
     JOIN teams t ON p.team_id = t.id
@@ -219,11 +231,11 @@ app.get('/api/players', async (c) => {
 
 app.post('/api/players', async (c) => {
   const guard = await requireAdmin(c); if (guard) return guard
-  const { team_id, name, jersey_number, position, height } = await c.req.json()
+  const { team_id, name, jersey_number } = await c.req.json()
   if (!team_id || !name) return c.json({ error: 'team_id and name required' }, 400)
   const result = await c.env.DB.prepare(
-    'INSERT INTO players (team_id, name, jersey_number, position, height) VALUES (?, ?, ?, ?, ?)'
-  ).bind(team_id, name, jersey_number || null, position || null, height || null).run()
+    'INSERT INTO players (team_id, name, jersey_number) VALUES (?, ?, ?)'
+  ).bind(team_id, name, jersey_number || null).run()
   return c.json({ id: result.meta.last_row_id })
 })
 
@@ -238,7 +250,7 @@ app.delete('/api/players/:id', async (c) => {
 app.get('/api/player/:id', async (c) => {
   const id = c.req.param('id')
   const player = await c.env.DB.prepare(`
-    SELECT p.id, p.team_id, p.name, p.jersey_number, p.position, p.height, p.created_at,
+    SELECT p.id, p.team_id, p.name, p.jersey_number, p.created_at,
            t.name as team_name, t.tournament_id
     FROM players p
     JOIN teams t ON p.team_id = t.id
@@ -252,7 +264,7 @@ app.get('/api/player/:id', async (c) => {
 app.get('/api/player/:id/stats', async (c) => {
   const id = c.req.param('id')
   const player = await c.env.DB.prepare(`
-    SELECT p.id, p.team_id, p.name, p.jersey_number, p.position, p.height, p.created_at,
+    SELECT p.id, p.team_id, p.name, p.jersey_number, p.created_at,
            t.name as team_name, t.tournament_id
     FROM players p
     JOIN teams t ON p.team_id = t.id
@@ -292,7 +304,7 @@ app.get('/api/player/:id/stats', async (c) => {
 app.get('/api/player-of-the-day', async (c) => {
   const tournament_id = c.req.query('tournament_id')
   let query = `
-    SELECT ps.*, p.name as player_name, p.jersey_number, p.position, p.height,
+    SELECT ps.*, p.name as player_name, p.jersey_number,
            t.name as team_name, t.tournament_id,
            g.game_date, g.home_score, g.away_score,
            ht.name as home_team_name, at.name as away_team_name
@@ -399,9 +411,8 @@ function HomePage() {
         </section>
 
         {/* Stat Strip */}
-        <section class="stat-strip" id="stat-strip">
+        <section class="stat-strip stat-strip-3" id="stat-strip">
           <div class="stat-strip-item"><div class="value" id="count-players">—</div><div class="label">Players</div></div>
-          <div class="stat-strip-item"><div class="value" id="count-tournaments">—</div><div class="label">Tournaments</div></div>
           <div class="stat-strip-item"><div class="value" id="count-teams">—</div><div class="label">Teams</div></div>
           <div class="stat-strip-item"><div class="value" id="count-games">—</div><div class="label">Games</div></div>
         </section>
@@ -422,18 +433,6 @@ function HomePage() {
           </a>
         </section>
 
-        {/* Tournaments */}
-        <section>
-          <div class="flex items-end justify-between mb-5">
-            <div>
-              <div class="text-accent font-heading text-sm uppercase tracking-widest font-bold">Compete</div>
-              <h2 class="text-3xl font-heading font-bold uppercase text-white">Tournaments</h2>
-            </div>
-          </div>
-          <div id="tournaments-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="text-muted col-span-full">Loading tournaments...</div>
-          </div>
-        </section>
       </main>
       <script src="/static/home.js"></script>
     </div>
