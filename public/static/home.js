@@ -1,59 +1,15 @@
-// Home page - list tournaments (redesigned)
-async function loadTournaments() {
-  const container = document.getElementById('tournaments-list');
-  try {
-    const { data } = await axios.get('/api/tournaments');
-    if (!data.tournaments || data.tournaments.length === 0) {
-      container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted)">
-          <i class="fas fa-info-circle" style="margin-right:8px"></i>No tournaments yet.
-        </div>`;
-      return;
-    }
-
-    // Determine badge for each tournament based on dates
-    container.innerHTML = data.tournaments.map(t => {
-      const badge = getTournamentBadge(t);
-      return `
-        <div class="card" style="cursor:default">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">${escapeHtml(t.name)}</h3>
-            ${badge}
-          </div>
-          ${t.location ? `<p style="font-size:13px;color:var(--muted);margin-bottom:4px"><i class="fas fa-map-marker-alt" style="margin-right:6px;color:var(--orange)"></i>${escapeHtml(t.location)}</p>` : ''}
-          ${t.start_date ? `<p style="font-size:13px;color:var(--muted);margin-bottom:10px"><i class="fas fa-calendar" style="margin-right:6px;color:var(--orange)"></i>${escapeHtml(t.start_date)}${t.end_date ? ' – ' + escapeHtml(t.end_date) : ''}</p>` : ''}
-          ${t.description ? `<p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${escapeHtml(t.description)}</p>` : ''}
-          <a href="/tournament/${t.id}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i>View</a>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    container.innerHTML = `<div class="alert alert-error">Failed to load tournaments</div>`;
-  }
-}
-
-function getTournamentBadge(t) {
-  if (!t.start_date && !t.end_date) return '';
-  const now = new Date();
-  const start = t.start_date ? new Date(t.start_date) : null;
-  const end = t.end_date ? new Date(t.end_date) : null;
-  if (end && now > end) return '<span class="badge badge-done">Completed</span>';
-  if (start && now < start) return '<span class="badge badge-upcoming">Upcoming</span>';
-  return '<span class="badge badge-active">● Active</span>';
-}
-
+// Home page - hero + browse buttons (no descriptive blurbs, no duplicate sections)
 function escapeHtml(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
-// Inject hero section above tournaments
 function buildHero() {
   const main = document.querySelector('main');
   if (!main) return;
 
-  // Replace the generic hero with our styled one
-  const heroSection = main.querySelector('section:first-child');
+  // Section 1: replace generic hero with styled hero
+  const heroSection = main.querySelector('section:nth-child(1)');
   if (heroSection) {
     heroSection.outerHTML = `
       <section style="margin-bottom:40px">
@@ -64,65 +20,60 @@ function buildHero() {
           <div class="stat-chip"><div class="stat-chip-num" id="count-players">—</div><div class="stat-chip-label">Players</div></div>
           <div class="stat-chip"><div class="stat-chip-num" id="count-tournaments">—</div><div class="stat-chip-label">Tournaments</div></div>
           <div class="stat-chip"><div class="stat-chip-num" id="count-teams">—</div><div class="stat-chip-label">Teams</div></div>
-          <div class="stat-chip"><div class="stat-chip-num">—</div><div class="stat-chip-label">Games Played</div></div>
+          <div class="stat-chip"><div class="stat-chip-num" id="count-games">—</div><div class="stat-chip-label">Games Played</div></div>
         </div>
       </section>
     `;
   }
 
-  // Restyle nav cards section
-  const cardsSection = main.querySelector('section:nth-child(2)');
-  if (cardsSection) {
-    cardsSection.innerHTML = `
-      <div class="section-heading">Browse</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px">
-        <a href="/player" class="card">
-          <div style="font-size:24px;margin-bottom:10px;color:var(--orange)"><i class="fas fa-user-circle"></i></div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;margin-bottom:4px">Player Stats</div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.5">Player of the Day + pick any player to see their PTS / REB / AST breakdown.</div>
-        </a>
-        <a href="/team" class="card">
-          <div style="font-size:24px;margin-bottom:10px;color:var(--orange)"><i class="fas fa-users"></i></div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;margin-bottom:4px">Team Stats</div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.5">Pick a team to see the whole roster's averages and W/L record.</div>
-        </a>
-      </div>
+  // Section 2 (SSR stat strip): drop — already covered by chips above
+  const ssrStatStrip = main.querySelector('section:nth-child(2)');
+  if (ssrStatStrip) ssrStatStrip.remove();
+
+  // Section that-was-3 (now nth-child(2) after the removal above): replace
+  // the duplicate "Player Stats / Team Stats" browse-card block with clean buttons.
+  const browseSection = main.querySelector('section:nth-child(2)');
+  if (browseSection) {
+    browseSection.outerHTML = `
+      <section style="margin-bottom:32px">
+        <div class="section-heading">Browse</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <a href="/player" class="card" style="text-align:center;padding:18px">
+            <div style="font-size:24px;margin-bottom:8px;color:var(--orange)"><i class="fas fa-user-circle"></i></div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px">Player Stats</div>
+          </a>
+          <a href="/team" class="card" style="text-align:center;padding:18px">
+            <div style="font-size:24px;margin-bottom:8px;color:var(--orange)"><i class="fas fa-users"></i></div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px">Team Stats</div>
+          </a>
+        </div>
+      </section>
     `;
   }
 
-  // Style tournaments section header
-  const tourSection = main.querySelector('section:last-child');
-  if (tourSection) {
-    const heading = tourSection.querySelector('h2');
-    if (heading) {
-      heading.className = '';
-      heading.style.cssText = 'font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px';
-      heading.innerHTML = 'Tournaments <span style="flex:1;height:1px;background:rgba(255,255,255,0.07);display:block"></span>';
+  // Defensive: remove any stale tournaments grid container or leftover sections
+  // that may exist from earlier server renders.
+  main.querySelectorAll('section').forEach(sec => {
+    const h2 = sec.querySelector('h2');
+    if (h2 && /^Tournaments?$/i.test((h2.textContent || '').trim())) {
+      // Only drop if this section doesn't contain real tournament cards.
+      // (Our intent here is just to clean any stray duplicate.)
+      const list = sec.querySelector('#tournaments-list');
+      if (!list) sec.remove();
     }
-    const grid = tourSection.querySelector('#tournaments-list');
-    if (grid) {
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px';
-    }
-  }
+  });
 }
 
 async function loadCounts() {
   try {
-    const [tourRes, playerRes] = await Promise.all([
-      axios.get('/api/tournaments'),
-      axios.get('/api/players')
-    ]);
-    const tournaments = tourRes.data.tournaments || [];
-    const players = playerRes.data.players || [];
-    const teamIds = new Set(players.map(p => p.team_id));
-
+    const { data } = await axios.get('/api/stats/counts');
     const el = id => document.getElementById(id);
-    if (el('count-players')) el('count-players').textContent = players.length;
-    if (el('count-tournaments')) el('count-tournaments').textContent = tournaments.length;
-    if (el('count-teams')) el('count-teams').textContent = teamIds.size;
-  } catch(e) {}
+    if (el('count-players')) el('count-players').textContent = data.players ?? 0;
+    if (el('count-tournaments')) el('count-tournaments').textContent = data.tournaments ?? 0;
+    if (el('count-teams')) el('count-teams').textContent = data.teams ?? 0;
+    if (el('count-games')) el('count-games').textContent = data.games ?? 0;
+  } catch (e) {}
 }
 
 buildHero();
-loadTournaments();
 loadCounts();
