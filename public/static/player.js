@@ -1,9 +1,11 @@
-// Player page — Player of the Day + team/player dropdowns (tournaments hidden from public)
+// Player page — Player of the Day + dropdown-based player selection (redesigned)
 const root = document.getElementById('player-app')
 
 const state = {
+  tournaments: [],
   teams: [],
   players: [],
+  selectedTournamentId: '',
   selectedTeamId: '',
   selectedPlayerId: '',
 }
@@ -16,9 +18,12 @@ function render() {
 
     <div class="section-heading">Find a Player</div>
     <div class="card" style="margin-bottom:20px">
-      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a team and player to see their PTS / REB / AST.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:4px">
-        <select id="sel-team">
+      <p style="color:var(--muted);margin-bottom:14px;font-size:14px">Pick a tournament, team, and player to see their PTS / REB / AST.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:4px">
+        <select id="sel-tournament">
+          <option value="">Select tournament...</option>
+        </select>
+        <select id="sel-team" disabled>
           <option value="">Select team...</option>
         </select>
         <select id="sel-player" disabled>
@@ -29,6 +34,7 @@ function render() {
     <div id="player-detail"></div>
   `
 
+  document.getElementById('sel-tournament').addEventListener('change', onTournamentChange)
   document.getElementById('sel-team').addEventListener('change', onTeamChange)
   document.getElementById('sel-player').addEventListener('change', onPlayerChange)
 }
@@ -73,12 +79,33 @@ async function loadPOTD() {
   }
 }
 
-async function loadTeams() {
-  const { data } = await axios.get('/api/teams')
+async function loadTournaments() {
+  const { data } = await axios.get('/api/tournaments')
+  state.tournaments = data.tournaments || []
+  const sel = document.getElementById('sel-tournament')
+  sel.innerHTML = '<option value="">Select tournament...</option>' +
+    state.tournaments.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
+}
+
+async function onTournamentChange(e) {
+  state.selectedTournamentId = e.target.value
+  state.selectedTeamId = ''
+  state.selectedPlayerId = ''
+  document.getElementById('player-detail').innerHTML = ''
+  const selTeam = document.getElementById('sel-team')
+  const selPlayer = document.getElementById('sel-player')
+  selPlayer.innerHTML = '<option value="">Select player...</option>'
+  selPlayer.disabled = true
+  if (!state.selectedTournamentId) {
+    selTeam.innerHTML = '<option value="">Select team...</option>'
+    selTeam.disabled = true
+    return
+  }
+  const { data } = await axios.get('/api/tournaments/' + state.selectedTournamentId)
   state.teams = data.teams || []
-  const sel = document.getElementById('sel-team')
-  sel.innerHTML = '<option value="">Select team...</option>' +
+  selTeam.innerHTML = '<option value="">Select team...</option>' +
     state.teams.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('')
+  selTeam.disabled = false
 }
 
 async function onTeamChange(e) {
@@ -179,4 +206,4 @@ function escapeHTML(s) {
 
 render()
 loadPOTD()
-loadTeams()
+loadTournaments()
